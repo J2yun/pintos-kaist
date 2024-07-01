@@ -28,6 +28,9 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+/* 프로젝트 1: List of process in BLOCKED state. */
+static struct list sleep_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -48,6 +51,9 @@ static long long user_ticks;    /* # of timer ticks in user programs. */
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
+
+/* 프로젝트 1: Local tick 중 최솟값을 저장하기 위한 Global tick */
+static int64_t next_tick_to_awake;
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -92,6 +98,8 @@ static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
 
    It is not safe to call thread_current() until this function
    finishes. */
+/* 
+프로젝트 1: Add the code to initialize the sleep queue data structure. */
 void
 thread_init (void) {
 	ASSERT (intr_get_level () == INTR_OFF);
@@ -109,6 +117,7 @@ thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
+	list_init (&sleep_list); // 프로젝트 1: sleep_que init (o)
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -210,6 +219,87 @@ thread_create (const char *name, int priority,
 	return tid;
 }
 
+/* 프로젝트 1(추가): sleep_list 자동 정렬 */
+bool less_func(const struct list_elem *e1, const struct list_elem *e2, void *aux) {
+	struct thread *t1 = list_entry(e1, struct thread, elem);
+	struct thread *t2 = list_entry(e2, struct thread, elem);
+
+	return t1->wakeup_tick < t2->wakeup_tick;
+}
+
+/* 프로젝트 1: 스레드 Sleep 구현
+	sets thread state to blocked and wait after insert it to sleep queue */
+void thread_sleep(int64_t ticks){
+	struct thread *curr; 
+	enum intr_level old_level;
+
+	old_level = intr_disable(); // F: 아래 코드 실행되는 동안 인터럽트 비활성화
+	curr = thread_current();
+	ASSERT(curr != idle_thread); // A: 현재 idle 스레드가 아니어야 함
+
+	update_next_tick_to_awake(curr->wakeup_tick = ticks); // C, D: 현재 스레드에 wakeup_tick을 대입하고 업데이트 함수 호출
+	// list_push_back(&sleep_list, &curr->elem); // F: sleep_list 맨 뒤에 삽입 > list_insert_order 방식도 고민해보기
+
+	// 프로젝트 1(추가): sleep_list가 awake_tick 오름차순으로 저장되도록 설정
+	list_insert_ordered(&sleep_list, &curr->elem, less_func, NULL); 
+
+	thread_block(); // B: 스레드 상태 BLOCK으로 바꿔주고 schedule() 실행함
+
+	intr_set_level(old_level); // F: 다시 인터럽트 가능하도록
+
+
+  /* if the current thread is not idle thread, ...A
+	change the state of the caller thread to BLOCKED, ...B
+	store the local tick to wake up, ...C
+	update the global tick if necessary, ...D
+	and call schedule() ...E */ 
+  /* When you manipulate thread list, disable interrupt! ...F */
+
+}
+
+/* 프로젝트 1: sleep 상태의 스레드 깨우는 함수
+*/
+void thread_awake(int64_t awake_ticks) {
+	next_tick_to_awake = INT64_MAX; // 다음 awake time을 정하기 위해 초기화
+	struct list_elem *e;
+
+	// e = list_begin(&sleep_list);
+
+	// while (e != list_end(&sleep_list)) {
+	// 	struct thread *t = list_entry(e, struct thread, elem);
+
+	// 	if (t->wakeup_tick <= awake_ticks) { // A
+	// 		e = list_remove(&t->elem);
+	// 		thread_unblock(t); // B -> 상태 변경, ready_list에 넣는것까지 모두 포함
+	// 	}
+	// 	else { // awake 되지 않는 놈들 중에서 wakeup_tick 최소가 다음 틱 업데이트
+	// 		e = list_next(e);
+	// 		update_next_tick_to_awake(t->wakeup_tick);
+	// 	}
+	// }
+
+	/* 프로젝트 1(추가): 앞부분 계속 빼내기*/
+
+	e = list_begin(&sleep_list);
+
+	while (true) {
+		struct thread *t = list_entry(e, struct thread, elem);
+		if (t->wakeup_tick <= awake_ticks) {
+			e = list_remove(&t->elem);
+			thread_unblock(t);
+		}
+		else {
+			update_next_tick_to_awake(t->wakeup_tick);
+			break;
+		}
+	}
+
+	/*
+	find any threads to wake up, ... A
+	move them to the ready list if necessary. ... B */
+
+}
+
 /* Puts the current thread to sleep.  It will not be scheduled
    again until awoken by thread_unblock().
 
@@ -306,7 +396,7 @@ thread_yield (void) {
 		list_push_back (&ready_list, &curr->elem);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
-}
+} 
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
@@ -588,3 +678,14 @@ allocate_tid (void) {
 
 	return tid;
 }
+
+void update_next_tick_to_awake(int64_t ticks) {
+	if (next_tick_to_awake > ticks) {
+		next_tick_to_awake = ticks;
+	}
+}
+
+int64_t get_next_tick_to_awake(void) {
+	return next_tick_to_awake;
+}
+

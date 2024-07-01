@@ -88,13 +88,21 @@ timer_elapsed (int64_t then) {
 }
 
 /* Suspends execution for approximately TICKS timer ticks. */
+/* 프로젝트 1: Insert the thread to sleep_que */
 void
 timer_sleep (int64_t ticks) {
 	int64_t start = timer_ticks ();
 
-	ASSERT (intr_get_level () == INTR_ON);
+	ASSERT (intr_get_level () == INTR_ON); // 인터럽트 가능한 경우 스레드 Sleep 시킴
+	// while (timer_elapsed (start) < ticks)
+	// 	thread_yield ();
+
+	/*
+	프로젝트 1(Challenge): if 조건문과 start 선언 중간에 context switching이 발생해서 if문이 무효화 될 수 있다.
+	*/
+	
 	while (timer_elapsed (start) < ticks)
-		thread_yield ();
+		thread_sleep (start + ticks);
 }
 
 /* Suspends execution for approximately MS milliseconds. */
@@ -122,10 +130,24 @@ timer_print_stats (void) {
 }
 
 /* Timer interrupt handler. */
+/* 프로젝트 1: move the thread from the sleep_list to ready_list. At every tick, 
+	check whether some thread must wake up from sleep queue and call wake up function */
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
-	thread_tick ();
+	thread_tick (); // update the cpu usage for running process
+
+	if (get_next_tick_to_awake() <= ticks) { // A
+		thread_awake(ticks); // B
+	}
+
+	/* code to add: 
+	check sleep list and the global tick. ...A
+	find any threads to wake up,
+	move them to the ready list if necessary.
+	update the global tick. ... B
+	*/
+
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

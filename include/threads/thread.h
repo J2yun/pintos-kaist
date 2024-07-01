@@ -88,6 +88,7 @@ typedef int tid_t;
 struct thread {
 	/* Owned by thread.c. */
 	tid_t tid;                          /* Thread identifier. */
+	int64_t wakeup_tick;				/* 프로젝트 1: 프로세스(스레드) tick to wake up */
 	enum thread_status status;          /* Thread state. */
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
@@ -123,6 +124,8 @@ void thread_print_stats (void);
 typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
+void thread_sleep(int64_t tick);
+
 void thread_block (void);
 void thread_unblock (struct thread *);
 
@@ -142,5 +145,12 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
+
+/* 프로젝트 1: timer에서 global tick을 사용하기 위한 선언 */
+void update_next_tick_to_awake(int64_t ticks);
+int64_t get_next_tick_to_awake(void);
+
+void thread_sleep(int64_t ticks);
+void thread_awake(int64_t awake_ticks);
 
 #endif /* threads/thread.h */
