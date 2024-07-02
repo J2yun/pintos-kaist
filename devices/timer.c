@@ -88,7 +88,7 @@ timer_elapsed (int64_t then) {
 }
 
 /* Suspends execution for approximately TICKS timer ticks. */
-/* 프로젝트 1: Insert the thread to sleep_que */
+/* 프로젝트 1-1: Insert the thread to sleep_que */
 void
 timer_sleep (int64_t ticks) {
 	int64_t start = timer_ticks ();
@@ -98,7 +98,7 @@ timer_sleep (int64_t ticks) {
 	// 	thread_yield ();
 
 	/*
-	프로젝트 1(Challenge): if 조건문과 start 선언 중간에 context switching이 발생해서 if문이 무효화 될 수 있다.
+	프로젝트 1-1(Challenge): if 조건문과 start 선언 중간에 context switching이 발생해서 if문이 무효화 될 수 있다.
 	*/
 	
 	while (timer_elapsed (start) < ticks)
@@ -130,7 +130,7 @@ timer_print_stats (void) {
 }
 
 /* Timer interrupt handler. */
-/* 프로젝트 1: move the thread from the sleep_list to ready_list. At every tick, 
+/* 프로젝트 1-1: move the thread from the sleep_list to ready_list. At every tick, 
 	check whether some thread must wake up from sleep queue and call wake up function */
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {

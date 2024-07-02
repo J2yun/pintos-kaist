@@ -146,7 +146,7 @@ int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
 
-/* 프로젝트 1: timer에서 global tick을 사용하기 위한 선언 */
+/* 프로젝트 1-1: timer에서 global tick을 사용하기 위한 선언 */
 void update_next_tick_to_awake(int64_t ticks);
 int64_t get_next_tick_to_awake(void);
 
