@@ -150,7 +150,11 @@ void do_iret (struct intr_frame *tf);
 void update_next_tick_to_awake(int64_t ticks);
 int64_t get_next_tick_to_awake(void);
 
+/* 프로젝트 1-1: sleep & wakeup 방식을 위한 함수 */
 void thread_sleep(int64_t ticks);
 void thread_awake(int64_t awake_ticks);
+
+/* 프로젝트 1-1, 1-2: 쓰레스 우선순위 비교를 위한 list_less_func */
+bool thread_priority_func(const struct list_elem *e1, const struct list_elem *e2, void *aux);
 
 #endif /* threads/thread.h */

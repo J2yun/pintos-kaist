@@ -1,19 +1,12 @@
 FAIL
-Test output failed to match any acceptable form.
-
-Acceptable output:
-  (priority-change) begin
-  (priority-change) Creating a high-priority thread 2.
-  (priority-change) Thread 2 now lowering priority.
-  (priority-change) Thread 2 should have just lowered its priority.
-  (priority-change) Thread 2 exiting.
-  (priority-change) Thread 2 should have just exited.
-  (priority-change) end
-Differences in `diff -u' format:
-  (priority-change) begin
-  (priority-change) Creating a high-priority thread 2.
-- (priority-change) Thread 2 now lowering priority.
-  (priority-change) Thread 2 should have just lowered its priority.
-- (priority-change) Thread 2 exiting.
-  (priority-change) Thread 2 should have just exited.
-  (priority-change) end
+Kernel panic in run: PANIC at ../../lib/kernel/list.c:270 in list_front(): assertion `!list_empty (list)' failed.
+Call stack: 0x8004213956 0x8004214308 0x8004214242 0x8004209cc0 0x800420a194 0x8004207b36 0x80042069b2 0x8004206070
+Translation of call stack:
+0x0000008004213956: debug_panic (lib/kernel/debug.c:32)
+0x0000008004214308: list_front (lib/kernel/list.c:271)
+0x0000008004214242: list_pop_front (lib/kernel/list.c:252)
+0x0000008004209cc0: sema_up (threads/synch.c:118)
+0x000000800420a194: lock_release (threads/synch.c:232)
+0x0000008004207b36: allocate_tid (threads/thread.c:700)
+0x00000080042069b2: thread_init (threads/thread.c:126)
+0x0000008004206070: main (threads/init.c:83)

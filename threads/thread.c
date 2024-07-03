@@ -185,6 +185,7 @@ thread_print_stats (void) {
    The code provided sets the new thread's `priority' member to
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
+/* 프로젝트 1-2: 스레드 생성될때 현재 실행중인 스레드보다 우선순위 높을 경우 선점하도록 */
 tid_t
 thread_create (const char *name, int priority,
 		thread_func *function, void *aux) {
@@ -214,19 +215,18 @@ thread_create (const char *name, int priority,
 	t->tf.eflags = FLAG_IF;
 
 	/* Add to run queue. */
-	thread_unblock (t);
+	thread_unblock (t); // 프로젝트 1-2: unblock에서 ready list에 넣을때 우선순위로 들어가니 우선순위 높을 경우 yield
+	/* 
+	프로젝트 1-2: compare the priorities of the currently running thread and the newly inserted one. 
+		Yield the CPU if the newly arriving thread has higher priority*/
+	int curr_priority = thread_get_priority();
+
+	if (priority > curr_priority) {
+		thread_yield();
+	}
+
 
 	return tid;
-}
-
-/* 프로젝트 1-1(추가): sleep_list 자동 정렬 */
-bool thread_priority_func(const struct list_elem *e1, const struct list_elem *e2, void *aux) {
-	struct thread *t1 = list_entry(e1, struct thread, elem);
-	struct thread *t2 = list_entry(e2, struct thread, elem);
-
-	// printf("fuction check! t1: %d, t2:%d \n",t1->wakeup_tick, t2->wakeup_tick);
-
-	return (t1->priority > t2->priority);
 }
 
 /* 프로젝트 1-1: 스레드 Sleep 구현
@@ -330,6 +330,7 @@ thread_block (void) {
    be important: if the caller had disabled interrupts itself,
    it may expect that it can atomically unblock a thread and
    update other data. */
+/* 프로젝트 1-2: unblock되어 ready list 들어갈 때, 우선순위에 맞게 들어가도록 */
 void
 thread_unblock (struct thread *t) {
 	enum intr_level old_level;
@@ -338,8 +339,8 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
-	// list_insert_ordered(&ready_list, &t->elem, thread_priority_func, NULL);
+	// list_push_back (&ready_list, &t->elem);
+	list_insert_ordered(&ready_list, &t->elem, thread_priority_func, NULL);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -393,6 +394,7 @@ thread_exit (void) {
 
 /* Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
+/* 프로젝트 1-2: 스레드 yield하여 ready list에 넣을 때, 우선순위에 맞게 들어가도록 */
 void
 thread_yield (void) {
 	struct thread *curr = thread_current ();
@@ -402,16 +404,25 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
-		// list_insert_ordered(&ready_list, &curr->elem, thread_priority_func, NULL);
+		// list_push_back (&ready_list, &curr->elem);
+		list_insert_ordered(&ready_list, &curr->elem, thread_priority_func, NULL);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 } 
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
+/* 프로젝트 1-2: 현재 실행 중인 스레드의 우선순위를 변경하는데, ready list에 있는 우선순위 보다 작아질 수 있음
+	ready list에 스레드가 있고 가장 클 경우 thread_yield() 호출하기 */
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
+	
+	if (!list_empty(&ready_list)) {
+		struct thread *higest_thread = list_entry(list_begin(&ready_list), struct thread, elem);
+		if (higest_thread->priority > thread_get_priority()) {
+			thread_yield();
+		}
+	}
 }
 
 /* Returns the current thread's priority. */
@@ -697,5 +708,15 @@ void update_next_tick_to_awake(int64_t ticks) {
 
 int64_t get_next_tick_to_awake(void) {
 	return next_tick_to_awake;
+}
+
+/* 프로젝트 1-1(추가): sleep_list 자동 정렬 */
+bool thread_priority_func(const struct list_elem *e1, const struct list_elem *e2, void *aux) {
+	struct thread *t1 = list_entry(e1, struct thread, elem);
+	struct thread *t2 = list_entry(e2, struct thread, elem);
+
+	// printf("fuction check! t1: %d, t2:%d \n",t1->wakeup_tick, t2->wakeup_tick);
+
+	return (t1->priority > t2->priority);
 }
 

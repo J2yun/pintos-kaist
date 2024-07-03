@@ -7,29 +7,13 @@ Press Ctrl-B to configure iPXE (PCI 00:03.0)...
 
 Booting from Hard Disk...
 Kernel command line: -q run alarm-priority
-0 ~ 9fc00 1
-100000 ~ 13e0000 1
-Pintos booting with: 
-	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
-	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  104,755,200 loops/s.
-Boot complete.
-Executing 'alarm-priority':
-(alarm-priority) begin
-(alarm-priority) Thread priority 30 woke up.
-(alarm-priority) Thread priority 29 woke up.
-(alarm-priority) Thread priority 28 woke up.
-(alarm-priority) Thread priority 27 woke up.
-(alarm-priority) Thread priority 26 woke up.
-(alarm-priority) Thread priority 25 woke up.
-(alarm-priority) Thread priority 24 woke up.
-(alarm-priority) Thread priority 23 woke up.
-(alarm-priority) Thread priority 22 woke up.
-(alarm-priority) Thread priority 21 woke up.
-(alarm-priority) end
-Execution of 'alarm-priority' complete.
-Timer: 522 ticks
-Thread: 490 idle ticks, 32 kernel ticks, 0 user ticks
-Console: 880 characters output
+Kernel PANIC at ../../lib/kernel/list.c:270 in list_front(): assertion `!list_empty (list)' failed.
+Call stack: 0x8004213956 0x8004214308 0x8004214242 0x8004209cc0 0x800420a194 0x8004207b36 0x80042069b2 0x8004206070.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Timer: 0 ticks
+Thread: 0 idle ticks, 0 kernel ticks, 0 user ticks
+Console: 480 characters output
 Keyboard: 0 keys pressed
 Powering off...
