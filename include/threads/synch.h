@@ -39,8 +39,9 @@ void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
 /* 프로젝트 1-2: 스레드 우선 순위에 따라 정렬하기 위한 function*/
-bool thread_priority_func(const struct list_elem *e1, const struct list_elem *e2, void *aux);
-
+void priority_donation(void);
+void refresh_priority(void);
+void remove_with_lock(struct lock *lock);
 /* Optimization barrier.
  *
  * The compiler will not reorder operations across an

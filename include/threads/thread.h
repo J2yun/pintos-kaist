@@ -93,6 +93,12 @@ struct thread {
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
 
+	/* 프로젝트 1-2: synch 구현 */
+	int original_priority;
+	struct lock *wait_on_lock;
+	struct list dontaions;
+	struct list_elem d_elem;
+
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
@@ -155,6 +161,6 @@ void thread_sleep(int64_t ticks);
 void thread_awake(int64_t awake_ticks);
 
 /* 프로젝트 1-1, 1-2: 쓰레스 우선순위 비교를 위한 list_less_func */
-bool thread_priority_func(const struct list_elem *e1, const struct list_elem *e2, void *aux);
+bool thread_priority_cmp(const struct list_elem *e1, const struct list_elem *e2, void *aux);
 
 #endif /* threads/thread.h */

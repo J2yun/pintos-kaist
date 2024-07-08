@@ -113,7 +113,7 @@ thread_init (void) {
 	};
 	lgdt (&gdt_ds);
 
-	/* Init the globla thread context */
+	/* Init the global thread context */
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
@@ -243,7 +243,7 @@ void thread_sleep(int64_t ticks){
 	// list_push_back(&sleep_list, &curr->elem); // F: sleep_list 맨 뒤에 삽입 > list_insert_order 방식도 고민해보기
 
 	// 프로젝트 1-1(추가): sleep_list가 awake_tick 오름차순으로 저장되도록 설정
-	list_insert_ordered(&sleep_list, &curr->elem, thread_priority_func, NULL); 
+	list_insert_ordered(&sleep_list, &curr->elem, thread_priority_cmp, NULL); 
 	// struct list_elem * e;
 	// for (e=list_begin(&sleep_list); e!=list_end(&sleep_list);e = list_next(e)) {
 	// 	struct thread *t = list_entry(e, struct thread, elem);
@@ -340,7 +340,7 @@ thread_unblock (struct thread *t) {
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
 	// list_push_back (&ready_list, &t->elem);
-	list_insert_ordered(&ready_list, &t->elem, thread_priority_func, NULL);
+	list_insert_ordered(&ready_list, &t->elem, thread_priority_cmp, NULL);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -405,7 +405,7 @@ thread_yield (void) {
 	old_level = intr_disable ();
 	if (curr != idle_thread)
 		// list_push_back (&ready_list, &curr->elem);
-		list_insert_ordered(&ready_list, &curr->elem, thread_priority_func, NULL);
+		list_insert_ordered(&ready_list, &curr->elem, thread_priority_cmp, NULL);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 } 
@@ -415,10 +415,17 @@ thread_yield (void) {
 	ready list에 스레드가 있고 가장 클 경우 thread_yield() 호출하기 */
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
-	
+	struct thread *curr = thread_current();
+	curr->priority = new_priority;
+	curr->original_priority = new_priority;
+
+	list_sort(&ready_list,thread_priority_cmp, NULL);
+
+	refresh_priority();
+
+	// 설정된 우선순위가 ready list 안에서 제일 우선순위가 높은 스레드보다 낮을 경우
 	if (!list_empty(&ready_list)) {
-		struct thread *higest_thread = list_entry(list_begin(&ready_list), struct thread, elem);
+		struct thread *higest_thread = list_entry(list_front(&ready_list), struct thread, elem);
 		if (higest_thread->priority > thread_get_priority()) {
 			thread_yield();
 		}
@@ -520,6 +527,13 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+
+	/* 프로젝트 1-2: priority donantion을 위한 구조 init */
+	t->original_priority = priority;
+	t->wait_on_lock = NULL;
+	list_init(&t->dontaions);
+	
+
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -711,7 +725,7 @@ int64_t get_next_tick_to_awake(void) {
 }
 
 /* 프로젝트 1-1(추가): sleep_list 자동 정렬 */
-bool thread_priority_func(const struct list_elem *e1, const struct list_elem *e2, void *aux) {
+bool thread_priority_cmp(const struct list_elem *e1, const struct list_elem *e2, void *aux) {
 	struct thread *t1 = list_entry(e1, struct thread, elem);
 	struct thread *t2 = list_entry(e2, struct thread, elem);
 
@@ -719,4 +733,3 @@ bool thread_priority_func(const struct list_elem *e1, const struct list_elem *e2
 
 	return (t1->priority > t2->priority);
 }
-
