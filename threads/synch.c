@@ -71,11 +71,12 @@ sema_down (struct semaphore *sema) {
 		unblock 되었을 때 다시 세마포어의 상태를 확하는 것 */
 	while (sema->value == 0) {
 		// list_push_back (&sema->waiters, &thread_current ()->elem);
-		list_insert_ordered (&sema->waiters, &thread_current ()->elem, thread_priority_cmp, NULL);
+		list_insert_ordered (&sema->waiters, &thread_current()->elem, thread_priority_cmp, NULL);
 		thread_block (); // 현재 스레드를 차단 (이 지점에서 실행이 중단됨)
 	}
 	sema->value--; // 세마포어 값 감소 (스레드가 깨어난 후 실행됨)
 	intr_set_level (old_level);
+	
 }
 
 /* Down or "P" operation on a semaphore, but only if the
@@ -117,7 +118,9 @@ sema_up (struct semaphore *sema) {
 	old_level = intr_disable ();
 	
 	if (!list_empty (&sema->waiters)) { // 중괄호 없던거 ㄹㅈㄷ
-		// list_sort(&sema->waiters, thread_priority_cmp, NULL);	
+		// 여기서 sort 하는 이유, waiter 내의 priority가 변경되어 있을 수도 있다. 
+		// thread_set_priority에서는 ready list만 sort 하고 waiters는 sort 안함
+		list_sort(&sema->waiters, thread_priority_cmp, NULL);	
 		// waiters 에서 pop 하기 전에 정렬이 되어있어야 우선 순위에 맞게 pop 됨
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
@@ -126,6 +129,7 @@ sema_up (struct semaphore *sema) {
 	// 이거 때문에 3시간 삽질함!!!!!!!!!!!!!!!!
 	thread_yield(); // Unlock 되고나서 다음 스레드가 점유할 수 있도록 하기 위해 필요
 	intr_set_level (old_level);
+	
 }
 
 static void sema_test_helper (void *sema_);
@@ -322,7 +326,7 @@ cond_wait (struct condition *cond, struct lock *lock) {
 
 	sema_init (&waiter.semaphore, 0);
 	// list_push_back (&cond->waiters, &waiter.elem);
-	list_insert_ordered(&cond->waiters,&waiter.elem, thread_priority_cmp, NULL);
+	list_insert_ordered(&cond->waiters, &waiter.elem, sema_priority_func, NULL);
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
 	lock_acquire (lock);
@@ -345,7 +349,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 
 	if (!list_empty (&cond->waiters)) {
 		// waiters 에서 pop 하기 전에 정렬이 되어있어야 우선 순위에 맞게 pop 됨	
-		// list_sort(&cond->waiters, thread_priority_cmp, NULL);
+		list_sort(&cond->waiters, sema_priority_func, NULL);
 		sema_up (&list_entry (list_pop_front (&cond->waiters),
 					struct semaphore_elem, elem)->semaphore);
 	}
@@ -407,7 +411,7 @@ refresh_priority(void) {
 
 void
 remove_with_lock(struct lock *lock) {
-	struct thread *t = thread_current();
+	// struct thread *t = thread_current();
 	struct semaphore *sema = &lock->semaphore;
 
 	struct list_elem *e;
@@ -420,11 +424,17 @@ remove_with_lock(struct lock *lock) {
 
 
 // /* 프로젝트 1-2: 스레드 우선 순위에 따라 정렬하기 위한 function*/
-// bool thread_priority_func(const struct list_elem *e1, const struct list_elem *e2, void *aux) {
-// 	struct thread *t1 = list_entry(e1, struct thread, elem);
-// 	struct thread *t2 = list_entry(e2, struct thread, elem);
+bool sema_priority_func(const struct list_elem *e1, const struct list_elem *e2, void *aux) {
+	struct semaphore_elem *s1 = list_entry(e1, struct semaphore_elem, elem);
+	struct semaphore_elem *s2 = list_entry(e2, struct semaphore_elem, elem);
 
-// 	// printf("fuction check! t1: %d, t2:%d \n",t1->wakeup_tick, t2->wakeup_tick);
+	if (list_empty(&s1->semaphore.waiters)) {
+		return false;
+	}
 
-// 	return (t1->priority > t2->priority);
-// }
+	struct thread *t1 = list_entry(list_front(&s1->semaphore.waiters), struct thread, elem);
+	struct thread *t2 = list_entry(list_front(&s2->semaphore.waiters), struct thread, elem);
+
+	// printf("fuction check! t1: %d, t2:%d \n",t1->wakeup_tick, t2->wakeup_tick);
+	return (t1->priority > t2->priority);
+}
