@@ -418,7 +418,7 @@ thread_set_priority (int new_priority) {
 	curr->priority = new_priority;
 	curr->original_priority = new_priority;
 
-	list_sort(&ready_list,thread_priority_cmp, NULL);
+	// list_sort(&ready_list,thread_priority_cmp, NULL);
 
 	refresh_priority();
 
@@ -530,7 +530,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	/* 프로젝트 1-2: priority donantion을 위한 구조 init */
 	t->original_priority = priority;
 	t->wait_on_lock = NULL;
-	list_init(&t->dontaions);
+	list_init(&t->donations);
 	
 
 }

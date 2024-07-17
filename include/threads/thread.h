@@ -96,7 +96,7 @@ struct thread {
 	/* 프로젝트 1-2: synch 구현 */
 	int original_priority;
 	struct lock *wait_on_lock;
-	struct list dontaions;
+	struct list donations;
 	struct list_elem d_elem;
 
 	/* Shared between thread.c and synch.c. */

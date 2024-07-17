@@ -212,7 +212,7 @@ lock_acquire (struct lock *lock) {
 		// list_insert_ordered(&lock->semaphore.waiters, &curr->d_elem, thread_priority_func, NULL);
 		thread_current()->wait_on_lock = lock;
 		// printf(" donation 이전 holder priority: %d\n\n", lock->holder->priority);
-		list_insert_ordered(&lock->holder->dontaions, &thread_current()->d_elem, thread_priority_cmp, NULL);
+		list_insert_ordered(&lock->holder->donations, &thread_current()->d_elem, thread_priority_cmp, NULL);
 
 		// struct list_elem *e = list_begin(&(lock->holder->dontaions));
 		// for (e; e!=list_end(&lock->holder->dontaions); e=list_next(e)) {
@@ -326,7 +326,7 @@ cond_wait (struct condition *cond, struct lock *lock) {
 
 	sema_init (&waiter.semaphore, 0);
 	// list_push_back (&cond->waiters, &waiter.elem);
-	list_insert_ordered(&cond->waiters, &waiter.elem, sema_priority_func, NULL);
+	list_insert_ordered(&cond->waiters, &waiter.elem, sema_elem_priority_cmp, NULL);
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
 	lock_acquire (lock);
@@ -349,7 +349,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 
 	if (!list_empty (&cond->waiters)) {
 		// waiters 에서 pop 하기 전에 정렬이 되어있어야 우선 순위에 맞게 pop 됨	
-		list_sort(&cond->waiters, sema_priority_func, NULL);
+		list_sort(&cond->waiters, sema_elem_priority_cmp, NULL);
 		sema_up (&list_entry (list_pop_front (&cond->waiters),
 					struct semaphore_elem, elem)->semaphore);
 	}
@@ -400,9 +400,9 @@ refresh_priority(void) {
 
 	t->priority = t->original_priority; // 우선순위 초기화
 
-	if (!list_empty(&t->dontaions)) {// donation 할 놈들이 있을 때 호출되어야 함
+	if (!list_empty(&t->donations)) {// donation 할 놈들이 있을 때 호출되어야 함
 		// donation list 첫번째(가장 큰 우선순위)가 내 priority 보다 높을 경우 donation
-		struct thread *d_thread = list_entry(list_front(&t->dontaions),struct thread, d_elem);
+		struct thread *d_thread = list_entry(list_front(&t->donations),struct thread, d_elem);
 		if (t->priority < d_thread->priority) {
 				t->priority = d_thread->priority;
 		}
@@ -424,16 +424,17 @@ remove_with_lock(struct lock *lock) {
 
 
 // /* 프로젝트 1-2: 스레드 우선 순위에 따라 정렬하기 위한 function*/
-bool sema_priority_func(const struct list_elem *e1, const struct list_elem *e2, void *aux) {
+bool sema_elem_priority_cmp(const struct list_elem *e1, const struct list_elem *e2, void *aux) {
 	struct semaphore_elem *s1 = list_entry(e1, struct semaphore_elem, elem);
 	struct semaphore_elem *s2 = list_entry(e2, struct semaphore_elem, elem);
 
-	if (list_empty(&s1->semaphore.waiters)) {
-		return false;
-	}
+	// if (list_empty(&s1->semaphore.waiters)) {
+	// 	printf("비어있음\n");
+	// 	return false;
+	// }
 
-	struct thread *t1 = list_entry(list_front(&s1->semaphore.waiters), struct thread, elem);
-	struct thread *t2 = list_entry(list_front(&s2->semaphore.waiters), struct thread, elem);
+	struct thread *t1 = list_entry(list_begin(&s1->semaphore.waiters), struct thread, elem);
+	struct thread *t2 = list_entry(list_begin(&s2->semaphore.waiters), struct thread, elem);
 
 	// printf("fuction check! t1: %d, t2:%d \n",t1->wakeup_tick, t2->wakeup_tick);
 	return (t1->priority > t2->priority);

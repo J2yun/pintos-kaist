@@ -43,7 +43,7 @@ void priority_donation(void);
 void refresh_priority(void);
 void remove_with_lock(struct lock *lock);
 
-bool sema_priority_func(const struct list_elem *e1, const struct list_elem *e2, void *aux);
+bool sema_elem_priority_cmp(const struct list_elem *e1, const struct list_elem *e2, void *aux);
 
 /* Optimization barrier.
  *
