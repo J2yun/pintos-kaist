@@ -211,15 +211,9 @@ lock_acquire (struct lock *lock) {
 		// 아래 로직은 lock_try_acquired에서 실행됨
 		// list_insert_ordered(&lock->semaphore.waiters, &curr->d_elem, thread_priority_func, NULL);
 		thread_current()->wait_on_lock = lock;
-		// printf(" donation 이전 holder priority: %d\n\n", lock->holder->priority);
+
 		list_insert_ordered(&lock->holder->donations, &thread_current()->d_elem, thread_priority_cmp, NULL);
 
-		// struct list_elem *e = list_begin(&(lock->holder->dontaions));
-		// for (e; e!=list_end(&lock->holder->dontaions); e=list_next(e)) {
-		// 	struct thread *t = list_entry(e,struct thread, d_elem);
-		// 	printf("%d" ,t->priority);
-		// }
-		// printf("\n");
 			
 		// priority donation 로직 수행
 		priority_donation();
@@ -427,11 +421,6 @@ remove_with_lock(struct lock *lock) {
 bool sema_elem_priority_cmp(const struct list_elem *e1, const struct list_elem *e2, void *aux) {
 	struct semaphore_elem *s1 = list_entry(e1, struct semaphore_elem, elem);
 	struct semaphore_elem *s2 = list_entry(e2, struct semaphore_elem, elem);
-
-	// if (list_empty(&s1->semaphore.waiters)) {
-	// 	printf("비어있음\n");
-	// 	return false;
-	// }
 
 	struct thread *t1 = list_entry(list_begin(&s1->semaphore.waiters), struct thread, elem);
 	struct thread *t2 = list_entry(list_begin(&s2->semaphore.waiters), struct thread, elem);

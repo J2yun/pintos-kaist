@@ -243,12 +243,6 @@ void thread_sleep(int64_t ticks){
 
 	// 프로젝트 1-1(추가): sleep_list가 awake_tick 오름차순으로 저장되도록 설정
 	list_insert_ordered(&sleep_list, &curr->elem, thread_priority_cmp, NULL); 
-	// struct list_elem * e;
-	// for (e=list_begin(&sleep_list); e!=list_end(&sleep_list);e = list_next(e)) {
-	// 	struct thread *t = list_entry(e, struct thread, elem);
-	// 	printf("(%d,%d) ",t->priority,t->wakeup_tick);
-	// }
-	// printf("=======\n");
 
 	thread_block(); // B: 스레드 상태 BLOCK으로 바꿔주고 schedule() 실행함
 
@@ -284,22 +278,6 @@ void thread_awake(int64_t awake_ticks) {
 			update_next_tick_to_awake(t->wakeup_tick);
 		}
 	}
-
-	/* 프로젝트 1-1(추가): 앞부분 계속 빼내기*/
-
-	// e = list_begin(&sleep_list);
-
-	// while (true) {
-	// 	struct thread *t = list_entry(e, struct thread, elem);
-	// 	if (t->wakeup_tick <= awake_ticks) {
-	// 		e = list_remove(&t->elem);
-	// 		thread_unblock(t);
-	// 	}
-	// 	else {
-	// 		update_next_tick_to_awake(t->wakeup_tick);
-	// 		break;
-	// 	}
-	// }
 
 	/*
 	find any threads to wake up, ... A
