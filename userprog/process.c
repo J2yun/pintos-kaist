@@ -51,7 +51,12 @@ process_create_initd (const char *file_name) {
 	strlcpy (fn_copy, file_name, PGSIZE);
 
 	/* Create a new thread to execute FILE_NAME. */
-	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
+	/* 프로젝트 2-1: Argument Passing 하도록 수정하기 
+		file_name 파싱해서 첫번째 인자 thread_create()에 thread 이름으로 전달 */
+	char *first_arg, *save_ptr;
+    first_arg = strtok_r (file_name, " ", &save_ptr);
+
+	tid = thread_create (first_arg, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
 	return tid;
@@ -176,17 +181,71 @@ process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
+	// Argument passing에 필요한 변수 선언
+	
+	char *token, *save_ptr;
+	int token_cnt = 0; // int argc
+	char *args[64]; // char* argv[]
+
+	/* 프로젝트 2-1: file_name 파싱하여 User stack에 토큰 저장 */
+	token = strtok_r(file_name, " ", &save_ptr);
+	while (token) {
+		args[token_cnt++] = token;
+		token = strtok_r(NULL, " ", &save_ptr);
+	}
+	
 	/* And then load the binary */
 	success = load (file_name, &_if);
 
 	/* If load failed, quit. */
-	palloc_free_page (file_name);
-	if (!success)
+	if (!success){
 		return -1;
+	}
+
+	argument_stack(token_cnt, args, &_if);
+	hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
+
+	palloc_free_page (file_name);
 
 	/* Start switched process. */
-	do_iret (&_if);
+	do_iret (&_if); // 커널 모드로부터 탈출하는 함수
 	NOT_REACHED ();
+}
+
+/* 프로젝트 2-1: 실질적으로 User stack에 정보 담는 함수 */
+void argument_stack(int argc, char** argv, struct intr_frame* if_) {
+
+	// Push Arguments
+	for (int i = argc-1; i >= 0; i--) { 
+		int N = strlen(argv[i]) + 1; // "\0" 고려하여 +1
+		if_->rsp -= N;
+		memcpy(if_->rsp, argv[i], N);
+		// first_letter 주소를 user stack에 저장하기 위해 새로 초기화
+		argv[i] = (char *)if_->rsp; 
+	}
+	// Padding: 8의 배수에 맞춰 0으로 채워주기
+	if (if_->rsp % 8) {
+		int padding = if_->rsp % 8;
+		if_->rsp -= padding;
+		memset(if_->rsp, 0, padding);
+	}
+
+	// For argv[argc] 
+	if_->rsp -= 8;
+	memset(if_->rsp, 0, 8);
+
+	// Push argc and argv address
+	for (int i = argc - 1; i >= 0; i--) {
+		if_->rsp -= 8;
+		memcpy(if_->rsp, &argv[i], 8);
+	}
+
+	// Fake retrun address
+	if_->rsp -= 8;
+	memset(if_->rsp, 0, 8);
+
+	if_->R.rdi = argc;
+	if_->R.rsi = if_->rsp + 8; // argv[0]의 주소
 }
 
 
@@ -415,7 +474,8 @@ load (const char *file_name, struct intr_frame *if_) {
 	if_->rip = ehdr.e_entry;
 
 	/* TODO: Your code goes here.
-	 * TODO: Implement argument passing (see project2/argument_passing.html). */
+	 * TODO: Implement argument passing (see project2/argument_passing.html). 
+	 * 프로젝트 2-1: */
 
 	success = true;
 

@@ -387,6 +387,13 @@ thread_yield (void) {
 	intr_set_level (old_level);
 } 
 
+void
+thread_try_yield(void) {
+	if (!list_empty(&ready_list) && !intr_context()) {
+		thread_yield();
+	}
+}
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 /* 프로젝트 1-2: 현재 실행 중인 스레드의 우선순위를 변경하는데, ready list에 있는 우선순위 보다 작아질 수 있음
 	ready list에 스레드가 있고 가장 클 경우 thread_yield() 호출하기 */

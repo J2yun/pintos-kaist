@@ -127,7 +127,7 @@ sema_up (struct semaphore *sema) {
 	}
 	sema->value++;
 	// 이거 때문에 3시간 삽질함!!!!!!!!!!!!!!!!
-	thread_yield(); // Unlock 되고나서 다음 스레드가 점유할 수 있도록 하기 위해 필요
+	thread_try_yield(); // Unlock 되고나서 다음 스레드가 점유할 수 있도록 하기 위해 필요
 	intr_set_level (old_level);
 	
 }

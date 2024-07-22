@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "synch.h": "c"
+        "synch.h": "c",
+        "process.h": "c",
+        "inttypes.h": "c"
     }
 }
